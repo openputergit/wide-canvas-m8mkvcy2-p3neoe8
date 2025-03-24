@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Liveness Checker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .video-container {
+            position: relative;
+            width: 100%;
+            max-width: 640px;
+            margin: 0 auto;
+        }
+        #overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 24px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        .capture-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .captured-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen p-4">
+    <div class="container mx-auto max-w-3xl">
+        <h1 class="text-3xl font-bold text-center mb-8 text-gray-800">Face Liveness Checker</h1>
+        
+        <div class="video-container bg-white rounded-lg shadow-lg p-4">
+            <video id="video" class="w-full rounded-lg" autoplay playsinline></video>
+            <div id="overlay"></div>
+        </div>
+
+        <div class="text-center mt-6">
+            <button id="startButton" class="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors">
+                Start Verification
+            </button>
+        </div>
+
+        <div class="capture-container">
+            <div class="text-center">
+                <canvas id="canvasTop" class="captured-image"></canvas>
+                <p class="mt-2 text-gray-600">Top View</p>
+            </div>
+            <div class="text-center">
+                <canvas id="canvasRight" class="captured-image"></canvas>
+                <p class="mt-2 text-gray-600">Right View</p>
+            </div>
+            <div class="text-center">
+                <canvas id="canvasLeft" class="captured-image"></canvas>
+                <p class="mt-2 text-gray-600">Left View</p>
+            </div>
+            <div class="text-center">
+                <canvas id="canvasBottom" class="captured-image"></canvas>
+                <p class="mt-2 text-gray-600">Bottom View</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const overlay = document.getElementById('overlay');
+        const startButton = document.getElementById('startButton');
+        const canvases = {
+            top: document.getElementById('canvasTop'),
+            right: document.getElementById('canvasRight'),
+            left: document.getElementById('canvasLeft'),
+            bottom: document.getElementById('canvasBottom')
+        };
+
+        let currentStep = 0;
+        const steps = [
+            { position: 'top', message: 'Look up' },
+            { position: 'right', message: 'Look right' },
+            { position: 'left', message: 'Look left' },
+            { position: 'bottom', message: 'Look down' }
+        ];
+
+        async function initCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'user' }
+                });
+                video.srcObject = stream;
+            } catch (err) {
+                console.error("Error accessing camera:", err);
+                alert("Unable to access camera. Please ensure camera permissions are granted.");
+            }
+        }
+
+        function captureImage(position) {
+            const canvas = canvases[position];
+            const context = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        }
+
+        function startVerification() {
+            currentStep = 0;
+            startButton.style.display = 'none';
+            processNextStep();
+        }
+
+        function processNextStep() {
+            if (currentStep >= steps.length) {
+                overlay.textContent = 'Verification Complete!';
+                startButton.style.display = 'block';
+                startButton.textContent = 'Start Over';
+                return;
+            }
+
+            const step = steps[currentStep];
+            overlay.textContent = step.message;
+
+            setTimeout(() => {
+                captureImage(step.position);
+                currentStep++;
+                setTimeout(processNextStep, 1000);
+            }, 2000);
+        }
+
+        startButton.addEventListener('click', startVerification);
+        
+        // Initialize camera when page loads
+        initCamera();
+
+        // Make it responsive for mobile
+        function handleResize() {
+            const videoContainer = document.querySelector('.video-container');
+            if (window.innerWidth < 640) {
+                videoContainer.style.height = `${window.innerWidth * 0.75}px`;
+            } else {
+                videoContainer.style.height = 'auto';
+            }
+        }
+
+        window.addEventListener('resize', handleResize);
+        handleResize();
+    </script>
+<script>document.body.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); return }, { passive: false })</script>
+	</body>
+</html>
